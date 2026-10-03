@@ -8,6 +8,8 @@ export interface SbeDevstandSettings {
     kb: boolean;
     mailer: boolean;
   };
+  /** Модель LLM по умолчанию; пусто — «как решит сервер» (умолчание оператора). */
+  llmModel: string;
   /** Локальный сервис разработчика — сюда идёт запись, пока плагин вне реестра. */
   localUrl: string;
   /** Токен локального auth-service для локального сервиса. */
@@ -17,6 +19,7 @@ export interface SbeDevstandSettings {
 export const DEFAULT_SETTINGS: SbeDevstandSettings = {
   apiUrl: 'https://epyur.fvds.ru',
   integrations: { llm: true, kb: true, mailer: true },
+  llmModel: '',
   localUrl: 'http://localhost:8080',
   localToken: '',
 };

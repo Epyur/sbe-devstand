@@ -35,7 +35,8 @@
 
 ## Настройки (`data.json`)
 
-`apiUrl`, `integrations { llm, kb, mailer }`, `localUrl`, `localToken`.
+`apiUrl`, `integrations { llm, kb, mailer }`, `llmModel` (пусто — «как решит
+сервер»; список моделей подтягивается у LLM-центра), `localUrl`, `localToken`.
 
 ## Зависимости
 

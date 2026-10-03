@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
+import { App, DropdownComponent, Notice, PluginSettingTab, Setting } from 'obsidian';
 import { errorMessage } from '../../../sbe-core/src/utils/errors';
 import type SbeDevstandPlugin from '../main';
 
@@ -6,6 +6,8 @@ export class SbeDevstandSettingsTab extends PluginSettingTab {
   constructor(app: App, private readonly plugin: SbeDevstandPlugin) {
     super(app, plugin);
   }
+
+  private modelDropdown: DropdownComponent | null = null;
 
   display(): void {
     const { containerEl } = this;
@@ -59,6 +61,19 @@ export class SbeDevstandSettingsTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           }));
     }
+    new Setting(containerEl)
+      .setName('Модель LLM по умолчанию')
+      .setDesc('Список — модели, доступные у оператора (подтягивается у LLM-центра). «Как решит сервер» — умолчание.')
+      .addDropdown(dd => {
+        this.modelDropdown = dd;
+        dd.addOption('', 'Как решит сервер');
+        dd.setValue(this.plugin.settings.llmModel);
+        dd.onChange(async v => {
+          this.plugin.settings.llmModel = v;
+          await this.plugin.saveSettings();
+        });
+      });
+    void this.loadModelOptions();
     new Setting(containerEl)
       .addButton(b => b
         .setButtonText('Проверить LLM')
@@ -128,5 +143,25 @@ export class SbeDevstandSettingsTab extends PluginSettingTab {
         'локального сервиса — в dev.local. Подробнее — в руководстве docs/sbe-devstand-guide.md.',
       cls: 'tn-devstand-help',
     });
+  }
+
+  /** Подтягивает список моделей оператора в выпадающий список (если доступен). */
+  private async loadModelOptions(): Promise<void> {
+    const dd = this.modelDropdown;
+    if (!dd) return;
+    try {
+      const models = await this.plugin.dev.llm.models();
+      const known = new Set(models.map(m => m.id));
+      for (const m of models) {
+        dd.addOption(m.id, m.is_old_model ? `${m.id} (устаревшая)` : m.id);
+      }
+      if (this.plugin.settings.llmModel && !known.has(this.plugin.settings.llmModel)) {
+        dd.addOption(this.plugin.settings.llmModel, `${this.plugin.settings.llmModel} (нет в списке)`);
+      }
+      dd.setValue(this.plugin.settings.llmModel);
+    } catch (e: unknown) {
+      // LLM-центр недоступен или ключ не задан — оставляем только «Как решит сервер».
+      console.warn('Стенд: список моделей недоступен:', errorMessage(e));
+    }
   }
 }

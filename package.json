@@ -1,6 +1,6 @@
 {
   "name": "sbe-devstand",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Стенд разработки SBE-плагинов вне реестра.",
   "main": "main.js",
   "scripts": {

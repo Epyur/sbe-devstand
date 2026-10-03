@@ -93,7 +93,10 @@ export class DevClient implements SbeDevstandApi {
   readonly llm = {
     models: async (): Promise<SbeLlmModel[]> => {
       this.requireIntegration('llm');
-      return (await this.call('GET', '/api/dev/llm/models')) as SbeLlmModel[];
+      // LLM-центр отдаёт провайдерский ответ в форме `{ data: [...] }` (как у
+      // OpenAI), а не голый массив.
+      const data = (await this.call('GET', '/api/dev/llm/models')) as { data?: SbeLlmModel[] };
+      return Array.isArray(data.data) ? data.data : [];
     },
     complete: async (
       system: string,
@@ -101,13 +104,15 @@ export class DevClient implements SbeDevstandApi {
       opts?: { model?: string; temperature?: number },
     ): Promise<string> => {
       this.requireIntegration('llm');
+      // Модель: явная в вызове → выбранная в настройках → пусто (решит сервер).
+      const model = opts?.model ?? (this.getSettings().llmModel || undefined);
       const body: Record<string, unknown> = {
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user },
         ],
       };
-      if (opts?.model) body.model = opts.model;
+      if (model) body.model = model;
       if (opts?.temperature !== undefined) body.temperature = opts.temperature;
       const data = (await this.call('POST', '/api/dev/llm/chat/completions', body)) as {
         choices?: Array<{ message?: { content?: string } }>;
