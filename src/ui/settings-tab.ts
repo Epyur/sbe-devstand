@@ -84,8 +84,8 @@ export class SbeDevstandSettingsTab extends PluginSettingTab {
         .setButtonText('Проверить почту')
         .onClick(async () => {
           try {
-            await this.plugin.dev.mailer.template();
-            new Notice('Почта: доступна.');
+            const data = await this.plugin.dev.mailer.pull();
+            new Notice(`Почта: доступна, писем — ${data.emails.length}.`);
           } catch (e) {
             new Notice(errorMessage(e));
           }

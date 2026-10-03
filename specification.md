@@ -22,8 +22,7 @@
 | `kb.search(q)` | поиск (`GET /api/dev/kb/search?q=`) |
 | `kb.note(id)` | заметка (`GET /api/dev/kb/notes/{id}`) |
 | `kb.folders()` | папки (`GET /api/dev/kb/folders`) |
-| `mailer.pull()` | чтение почты (`GET /api/dev/mailer/sync/pull`) |
-| `mailer.template()` | шаблон (`GET /api/dev/mailer/template`) |
+| `mailer.pull()` | письма с телом — `{ emails: [...] }` (`GET /api/dev/mailer/sync/pull`) |
 | `local` | `{ url, token }` локального сервиса (из настроек) |
 
 ## Внешние вызовы

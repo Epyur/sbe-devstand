@@ -1,4 +1,4 @@
-import { requestUrl } from 'obsidian';
+import { requestUrl, RequestUrlResponse } from 'obsidian';
 import { getService } from '../../../sbe-core/src/bridge';
 import type {
   DevstandLocal,
@@ -26,6 +26,22 @@ export class DevClient implements SbeDevstandApi {
     return apstore.auth.getToken('dev');
   }
 
+  /** Единая расшифровка статусов шлюза/целевого сервиса в понятные сообщения. */
+  private ensureOk(res: RequestUrlResponse): void {
+    if (res.status === 401) {
+      throw new Error('Стенд: нет доступа. Войдите в ЦУП (получите и активируйте ключ).');
+    }
+    if (res.status === 403) {
+      throw new Error('Стенд: доступ не выдан. Попросите администратора выдать роль в приложении «Стенд».');
+    }
+    if (res.status === 404) {
+      throw new Error('Стенд: этот вызов недоступен (ручка не входит в белый список).');
+    }
+    if (res.status >= 400) {
+      throw new Error(`Стенд: ошибка ${res.status}.`);
+    }
+  }
+
   private async call(
     method: string,
     path: string,
@@ -48,17 +64,12 @@ export class DevClient implements SbeDevstandApi {
       body: body !== undefined ? JSON.stringify(body) : undefined,
       throw: false,
     });
-    if (res.status === 401) {
-      throw new Error('Стенд: нет доступа. Войдите в ЦУП (получите и активируйте ключ).');
-    }
-    if (res.status === 403) {
-      throw new Error('Стенд: доступ не выдан. Попросите администратора выдать роль в приложении «Стенд».');
-    }
-    if (res.status === 404) {
-      throw new Error('Стенд: этот вызов недоступен (ручка не входит в белый список).');
-    }
-    if (res.status >= 400) {
-      throw new Error(`Стенд: ошибка ${res.status}.`);
+    this.ensureOk(res);
+    // Не-JSON ответ (например, шаблон письма — DOCX) парсить как JSON нельзя:
+    // иначе Obsidian бросает ошибку разбора и подставляет в неё куски бинарника.
+    const contentType = String(res.headers['content-type'] ?? '');
+    if (contentType && !/json/i.test(contentType)) {
+      throw new Error(`Стенд: сервис вернул не JSON (${contentType.split(';')[0].trim()}).`);
     }
     const data: unknown = res.json;
     return data;
@@ -121,13 +132,10 @@ export class DevClient implements SbeDevstandApi {
   };
 
   readonly mailer = {
-    pull: async (): Promise<unknown> => {
+    /** Письма с телом: `{ emails: [...] }` (форма серверного Email). */
+    pull: async (): Promise<{ emails: unknown[] }> => {
       this.requireIntegration('mailer');
-      return await this.call('GET', '/api/dev/mailer/sync/pull');
-    },
-    template: async (): Promise<unknown> => {
-      this.requireIntegration('mailer');
-      return await this.call('GET', '/api/dev/mailer/template');
+      return (await this.call('GET', '/api/dev/mailer/sync/pull')) as { emails: unknown[] };
     },
   };
 }
